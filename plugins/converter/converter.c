@@ -162,40 +162,41 @@ encoder_preset_load (const char *fname) {
         *cr = '\0';
 
         char *sp = strchr (str, ' ');
-        if (sp) {
-            *sp = '\0';
-            const char *item = sp + 1;
+        if (!sp) {
+            continue;
+        }
+        *sp = '\0';
+        const char *item = sp + 1;
 
-            if (!strcmp (str, "title")) {
-                p->title = strdup (item);
-            }
-            else if (!strcmp (str, "ext")) {
-                p->extension = strdup (item);
-            }
-            else if (!strcmp (str, "encoder")) {
-                p->encoder = strdup (item);
-            }
-            else if (!strcmp (str, "method")) {
-                p->method = atoi (item);
-            }
-            else if (!strcmp (str, "id3v2_version")) {
-                p->id3v2_version = atoi (item);
-            }
-            else if (!strcmp (str, "tag_id3v2")) {
-                p->tag_id3v2 = atoi (item);
-            }
-            else if (!strcmp (str, "tag_id3v1")) {
-                p->tag_id3v1 = atoi (item);
-            }
-            else if (!strcmp (str, "tag_apev2")) {
-                p->tag_apev2 = atoi (item);
-            }
-            else if (!strcmp (str, "tag_flac")) {
-                p->tag_flac = atoi (item);
-            }
-            else if (!strcmp (str, "tag_oggvorbis")) {
-                p->tag_oggvorbis = atoi (item);
-            }
+        if (!strcmp (str, "title")) {
+            p->title = strdup (item);
+        }
+        else if (!strcmp (str, "ext")) {
+            p->extension = strdup (item);
+        }
+        else if (!strcmp (str, "encoder")) {
+            p->encoder = strdup (item);
+        }
+        else if (!strcmp (str, "method")) {
+            p->method = atoi (item);
+        }
+        else if (!strcmp (str, "id3v2_version")) {
+            p->id3v2_version = atoi (item);
+        }
+        else if (!strcmp (str, "tag_id3v2")) {
+            p->tag_id3v2 = atoi (item);
+        }
+        else if (!strcmp (str, "tag_id3v1")) {
+            p->tag_id3v1 = atoi (item);
+        }
+        else if (!strcmp (str, "tag_apev2")) {
+            p->tag_apev2 = atoi (item);
+        }
+        else if (!strcmp (str, "tag_flac")) {
+            p->tag_flac = atoi (item);
+        }
+        else if (!strcmp (str, "tag_oggvorbis")) {
+            p->tag_oggvorbis = atoi (item);
         }
     }
 
