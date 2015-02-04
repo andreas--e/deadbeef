@@ -39,15 +39,15 @@
 #endif
 
 #if WORDS_BIGENDIAN
-    #define LE16 (x) (((uint16_t)x & 0xff00) >> 8 | ((uint16_t)x & 0x00ff) << 8)
-    #define LE32 (x) (((uint32_t)x & 0xff000000) >> 24 | ((uint32_t)x & 0x00ff0000 >> 8) | ((uint32_t)x & 0x0000ff00) << 8 | ((uint32_t)x & 0x000000ff) << 24)
+    #define LE16(x) (((uint16_t)x & 0xff00) >> 8 | ((uint16_t)x & 0x00ff) << 8)
+    #define LE32(x) (((uint32_t)x & 0xff000000) >> 24 | ((uint32_t)x & 0x00ff0000 >> 8) | ((uint32_t)x & 0x0000ff00) << 8 | ((uint32_t)x & 0x000000ff) << 24)
 #else
-    #define LE16 (x) (x)
-    #define LE32 (x) (x)
+    #define LE16(x) (x)
+    #define LE32(x) (x)
 #endif
 
-#define min (x,y) ((x)< (y)? (x): (y))
-#define max (x,y) ((x)> (y)? (x): (y))
+#define min(x,y) ((x)<(y)?(x):(y))
+#define max(x,y) ((x)>(y)?(x):(y))
 
 #define CONVERT_SAMPLES 4096
 
