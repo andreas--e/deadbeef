@@ -114,19 +114,12 @@ encoder_preset_free (ddb_encoder_preset_t *p) {
     free (p);
 }
 
-static char *
-preset_path (const char *dir, const char *subdir, const char *title) {
-    char *path = malloc (strlen (dir) + strlen (subdir) + strlen (title) + sizeof ("%s/%s/%s.txt"));
-    if (!path) {
+static const char *
+preset_path (const char *dir, const char *subdir, const char *title, char *buffer, int buffer_size) {
+    if (snprintf (buffer, buffer_size, "%s/%s/%s.txt", dir, subdir, title) < 0 || !ensure_dir (buffer)) {
         return NULL;
     }
-
-    if (sprintf (path, "%s/%s/%s.txt", dir, subdir, title) < 0 || !ensure_dir (path)) {
-        free (path);
-        return NULL;
-    }
-
-    return path;
+    return buffer;
 }
 
 static ddb_encoder_preset_t *
@@ -144,20 +137,19 @@ encoder_preset_duplicate (ddb_encoder_preset_t *old) {
     return new;
 }
 
-static char *
-encoder_preset_path (const char *title) {
-    return preset_path (deadbeef->get_config_dir (), "presets/encoders", title);
+static const char *
+encoder_preset_path (const char *title, char *buffer, int buffer_size) {
+    return preset_path (deadbeef->get_config_dir (), "presets/encoders", title, buffer, buffer_size);
 }
 
-static char *
-encoder_preset_builtin_path (const char *title) {
-    char title_copy[strlen (title)+1];
-    strcpy (title_copy, title);
+static const char *
+encoder_preset_builtin_path (const char *title, char *buffer, int buffer_size) {
+    char *title_copy = strdupa (title);
     char *p = title_copy;
     while ((p = strchr (p, ' '))) {
         *p = '_';
     }
-    return preset_path (deadbeef->get_plugin_dir (), "convpresets", title_copy);
+    return preset_path (deadbeef->get_plugin_dir (), "convpresets", title_copy, buffer, buffer_size);
 }
 
 static struct encoder_preset_link *
@@ -233,23 +225,23 @@ encoder_preset_load (const char *fname) {
 
 ddb_encoder_preset_t *
 encoder_preset_load_builtin (const char *title) {
-    char *path = encoder_preset_builtin_path (title);
+    char buffer[PATH_MAX];
+    const char *path = encoder_preset_builtin_path (title, buffer, sizeof (buffer));
     if (!path) {
         return NULL;
     }
 
     struct encoder_preset_link *l = encoder_preset_load (path);
-    free (path);
 
     return l ? &l->preset : NULL;
 }
 
 static void
 encoder_preset_delete (ddb_encoder_preset_t *p) {
-    char *path = encoder_preset_path (p->title);
+    char buffer[PATH_MAX];
+    const char *path = encoder_preset_path (p->title, buffer, sizeof (buffer));
     if (path) {
         unlink (path);
-        free (path);
     }
 }
 
@@ -264,13 +256,13 @@ encoder_preset_save (ddb_encoder_preset_t *p) {
         encoder_preset_delete (p);
     }
     else {
-        char *path = encoder_preset_path (p->title);
+        char buffer[PATH_MAX];
+        const char *path = encoder_preset_path (p->title, buffer, sizeof (buffer));
         if (!path) {
             return NULL;
         }
 
         FILE *fp = fopen (path, "w+b");
-        free (path);
         if (!fp) {
             return NULL;
         }
@@ -562,9 +554,9 @@ dsp_preset_get_for_idx (int idx) {
     return NULL;
 }
 
-static char *
-dsp_preset_path (const char *title) {
-    return preset_path (deadbeef->get_config_dir (), "presets/dsp", title);
+static const char *
+dsp_preset_path (const char *title, char *buffer, int buffer_size) {
+    return preset_path (deadbeef->get_config_dir (), "presets/dsp", title, buffer, buffer_size);
 }
 
 static ddb_dsp_preset_t *
@@ -604,13 +596,13 @@ dsp_preset_save (ddb_dsp_preset_t *p) {
         return NULL;
     }
 
-    char *path = dsp_preset_path (p->title);
+    char buffer[PATH_MAX];
+    const char *path = dsp_preset_path (p->title, buffer, sizeof (buffer));
     if (!path) {
         return NULL;
     }
 
     const int res = deadbeef->dsp_preset_save (path, p->chain);
-    free (path);
     if (res) {
         return NULL;
     }
@@ -768,10 +760,10 @@ free_dsp_presets (void) {
 
 static void
 dsp_preset_remove (ddb_dsp_preset_t *p) {
-    char *path = dsp_preset_path (p->title);
+    char buffer[PATH_MAX];
+    const char *path = dsp_preset_path (p->title, buffer, sizeof (buffer));
     if (path) {
         unlink (path);
-        free (path);
     }
 
     struct dsp_preset_link *old_link = (struct dsp_preset_link *)p;
