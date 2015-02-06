@@ -18,8 +18,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#define _FILE_OFFSET_BITS 64
-
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -910,13 +908,7 @@ encoder_command (const char *encoder_pattern, const char *in_path, const char *o
 }
 
 static int
-convert (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float,
-         enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
-#ifndef __STDC_IEC_559__
-    if (output_is_float) {
-        fprintf (stderr, "converter: __STDC_IEC_559__ macro not defined, float32 WAVE output may not be valid\n");
-    }
-#endif
+convert (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
 
     if (deadbeef->pl_get_item_duration (it) <= 0) {
         deadbeef->pl_lock ();
@@ -1022,6 +1014,7 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
     }
     else {
         fprintf (stderr, "Converter will encode using internal RIFF WAVE writer\n");
+        // FIXME: need to verify that this supports writing files >2G
         FILE *wav = fopen (out, "w+b");
         if (!wav) {
             *message = "Cannot open output wave file";
@@ -1043,17 +1036,17 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
         dsp_chain = dsp_plugin_duplicate (dsp_preset->chain);
         const size_t dspsize = CONVERT_SAMPLES * ceil ((double)384000 / fileinfo->fmt.samplerate) * 8 * 32 / 8;
         write_buffer = malloc (dspsize);
-        dsp_buffer = malloc (dspsize);fprintf (stderr, "readsize=%d, dspsize=%d\n", readsize, dspsize);
+        dsp_buffer = malloc (dspsize);
         if (!dsp_buffer) {
             goto error;
         }
     }
     else if (fileinfo->fmt.bps != outfmt.bps || fileinfo->fmt.is_float != outfmt.is_float) {
         const size_t writesize = CONVERT_SAMPLES * outfmt.channels * outfmt.bps / 8;
-        write_buffer = malloc (writesize);fprintf (stderr, "readsize=%d, writesize=%d\n", readsize, writesize);
+        write_buffer = malloc (writesize);
     }
     else {
-        write_buffer = read_buffer;fprintf (stderr, "readsize=%d\n", readsize);
+        write_buffer = read_buffer;
     }
     if (!write_buffer) {
         goto error;
@@ -1146,7 +1139,7 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
             * (uint32_t *) (wavehdr+68) = LE32 (outsize / outfmt.channels / outfmt.bps * 8);
         }
         * (uint32_t *) (wavehdr+wavehdr_size-4) = LE32 (min (outsize, 0xffffffff));
-        fseek (output, 0, SEEK_SET);
+        rewind (output);
         const int res = fwrite (wavehdr, wavehdr_size, 1, output) != 1 || fclose (output);
         output = NULL;
         if (res) {
