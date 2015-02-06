@@ -83,7 +83,7 @@ static int
 dirent_alphasort (const struct dirent **a, const struct dirent **b);
 
 static int
-convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data);
+convert_file (DB_playItem_t *it, ddb_convert_info_t *info, const char *out, char **message, ddb_convert_callback_t convert_callback, void *user_data);
 
 static void
 convert_tags (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, char **message);
@@ -908,8 +908,7 @@ encoder_command (const char *encoder_pattern, const char *in_path, const char *o
 }
 
 static int
-convert (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
-
+convert (DB_playItem_t *it, ddb_convert_info_t *info, const char *out, char **message, ddb_convert_callback_t convert_callback, void *user_data) {
     if (deadbeef->pl_get_item_duration (it) <= 0) {
         deadbeef->pl_lock ();
         *message = "Stream does not have finite length, not currently supported";
@@ -924,9 +923,9 @@ convert (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const ch
         return -1;
     }
 
-    if (!convert_file (it, encoder_preset, out, dsp_preset, output_bps, output_is_float, api, message, convert_callback, user_data)) {
-        convert_tags (it, encoder_preset, out, message);
-        if (*api == DDB_CONVERT_API_CONTINUE) {
+    if (!convert_file (it, info, out, message, convert_callback, user_data)) {
+        convert_tags (it, info->encoder_preset, out, message);
+        if (*(info->api) == DDB_CONVERT_API_CONTINUE) {
             return 0;
         }
     }
@@ -956,7 +955,7 @@ encoder_temp_path (void) {
 }
 
 static int
-convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
+convert_file (DB_playItem_t *it, ddb_convert_info_t *info, const char *out, char **message, ddb_convert_callback_t convert_callback, void *user_data) {
     void *read_buffer = NULL;
     void *write_buffer = NULL;
     void *dsp_buffer = NULL;
@@ -980,16 +979,16 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
 
     ddb_waveformat_t outfmt;
     memcpy (&outfmt, &fileinfo->fmt, sizeof (ddb_waveformat_t));
-    if (output_bps > 0) {
-        outfmt.bps = output_bps;
-        outfmt.is_float = output_is_float;
+    if (info->output_bps > 0) {
+        outfmt.bps = info->output_bps;
+        outfmt.is_float = info->output_is_float;
     }
 
-    if (encoder_preset->encoder && *encoder_preset->encoder) {
-        if (encoder_preset->method == DDB_ENCODER_METHOD_FILE && ! (temp_file_path = encoder_temp_path ())) {
+    if (info->encoder_preset->encoder && *info->encoder_preset->encoder) {
+        if (info->encoder_preset->method == DDB_ENCODER_METHOD_FILE && ! (temp_file_path = encoder_temp_path ())) {
             goto error;
         }
-        if (! (command = encoder_command (encoder_preset->encoder, temp_file_path, out))) {
+        if (! (command = encoder_command (info->encoder_preset->encoder, temp_file_path, out))) {
             goto error;
         }
         fprintf (stderr, "Converter command: %s\n", command);
@@ -1032,8 +1031,8 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
 
     const int readsize = CONVERT_SAMPLES * fileinfo->fmt.channels * fileinfo->fmt.bps / 8;
     read_buffer = malloc (readsize);
-    if (dsp_preset && dsp_preset->chain) {
-        dsp_chain = dsp_plugin_duplicate (dsp_preset->chain);
+    if (info->dsp_preset && info->dsp_preset->chain) {
+        dsp_chain = dsp_plugin_duplicate (info->dsp_preset->chain);
         const size_t dspsize = CONVERT_SAMPLES * ceil ((double)384000 / fileinfo->fmt.samplerate) * 8 * 32 / 8;
         write_buffer = malloc (dspsize);
         dsp_buffer = malloc (dspsize);
@@ -1059,7 +1058,7 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
 
     off_t outsize = 0;
     int sz = decoder->read (fileinfo, read_buffer, readsize);
-    while (*api == DDB_CONVERT_API_CONTINUE && sz > 0) {
+    while (*info->api == DDB_CONVERT_API_CONTINUE && sz > 0) {
         if (dsp_chain) {
             ddb_waveformat_t dspfmt;
             memcpy (&dspfmt, &fileinfo->fmt, sizeof (ddb_waveformat_t));
@@ -1149,7 +1148,7 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
         }
     }
 
-    if (*api != DDB_CONVERT_API_CONTINUE) {
+    if (*info->api != DDB_CONVERT_API_CONTINUE) {
         goto error;
     }
 
@@ -1172,7 +1171,7 @@ convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, con
         }
         int status = 0;
         while (waitpid (pid, &status, WNOHANG) == 0 || !WIFEXITED (status) && !WIFSIGNALED (status)) {
-            if (*api == DDB_CONVERT_API_ABORT) {
+            if (*info->api == DDB_CONVERT_API_ABORT) {
                 kill (pid*-1, SIGTERM);
             }
             convert_callback (start_time, time (NULL), -33, user_data);

@@ -493,7 +493,14 @@ convert_item (struct converter_ctx *conv, struct converter_ctx_item *item) {
 
     deadbeef->mutex_unlock (conv->mutex);
     char *message = NULL;
-    const int res = converter_plugin->convert (item->item, conv->encoder_preset, item->outpath, conv->dsp_preset, conv->output_bps, conv->output_is_float, &conv->api, &message, convert_callback, item);
+    ddb_convert_info_t info = {
+        .encoder_preset = conv->encoder_preset,
+        .dsp_preset = conv->dsp_preset,
+        .output_bps = conv->output_bps,
+        .output_is_float = conv->output_is_float,
+        .api = &conv->api
+    };
+    const int res = converter_plugin->convert (item->item, &info, item->outpath, &message, convert_callback, item);
     deadbeef->mutex_lock (conv->mutex);
     if (conv->api == DDB_CONVERT_API_ABORT) {
         message = _("User aborted");

@@ -58,6 +58,16 @@ typedef struct ddb_dsp_preset_s {
     ddb_dsp_context_t *chain;
 } ddb_dsp_preset_t;
 
+typedef void (*ddb_convert_callback_t) (time_t start_time, time_t time_now, const float length_in_seconds, void *user_data);
+
+typedef struct {
+    const ddb_encoder_preset_t *encoder_preset; // preset defining how to encode the converted file
+    const ddb_dsp_preset_t *dsp_preset; // preset defining DSP operations to be performed, may be null or empty
+    const int output_bps; // stream should be pre-converted to this resolution, -1 means no pre-convert
+    const int output_is_float; // stream should be pre-converted to float (output_bps should always be 32)
+    enum ddb_convert_api *api; // will be checked regularly during conversion
+} ddb_convert_info_t;
+
 typedef struct {
     DB_misc_t misc;
 
@@ -135,14 +145,10 @@ typedef struct {
 
     int // 0 = success, -1 = error, 1 = aborted
     (*convert) (DB_playItem_t *it, // track to be converted
-                const ddb_encoder_preset_t *encoder_preset, // preset defining how to encode the converted file
+                ddb_convert_info_t *info,
                 const char *outpath, // final path to write the file (should normally be obtained using get_output_path)
-                const ddb_dsp_preset_t *dsp_preset, // preset defining DSP operations to be performed, may be null or empty
-                const int output_bps, // stream should be pre-converted to this resolution, -1 means no pre-convert
-                const int output_is_float, // stream should be pre-converted to float (output_bps should always be 32)
-                enum ddb_convert_api *api, // will be checked regularly during conversion
                 char **message, // message reported back after an error
-                void (* convert_callback)(const time_t, const time_t, const float, void *), // callback to update progress
+                ddb_convert_callback_t convert_callback, // callback to update progress
                 void *user_data); // opaque pointer for the callback
 
     void
