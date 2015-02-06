@@ -69,6 +69,27 @@ struct dsp_preset_link {
 };
 static struct dsp_preset_link *dsp_presets;
 
+static int
+ensure_dir (const char *path);
+
+static ddb_encoder_preset_t *
+encoder_preset_copy (ddb_encoder_preset_t *to, ddb_encoder_preset_t *from);
+
+static ddb_encoder_preset_t *
+encoder_preset_get (const char *title);
+
+static int
+scandir_preset_filter (const struct dirent *ent);
+
+static int
+dirent_alphasort (const struct dirent **a, const struct dirent **b);
+
+static int
+convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data);
+
+static void
+convert_tags (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, char **message);
+
 static ddb_encoder_preset_t *
 encoder_preset_alloc (void) {
     return calloc (1, sizeof (struct encoder_preset_link));
@@ -941,15 +962,17 @@ encoder_temp_path (void) {
     if (path) {
         strcpy (path, dir);
         strcat (path, "/ddbconvXXXXXX");
-        mktemp (path);
+        if (!mktemp (path)) {
+            free (path);
+            return NULL;
+        }
         strcat (path, ".wav");
     }
     return path;
 }
 
 static int
-convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float,
-             enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
+convert_file (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, const char *out, const ddb_dsp_preset_t *dsp_preset, const int output_bps, const int output_is_float, enum ddb_convert_api *api, char **message, void (* convert_callback) (const time_t, const time_t, const float, void *), void *user_data) {
     void *read_buffer = NULL;
     void *write_buffer = NULL;
     void *dsp_buffer = NULL;

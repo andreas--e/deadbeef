@@ -75,17 +75,17 @@ static uintptr_t deferred_load_mutex;
 
 static void
 save_alert_dialog (GtkWindow *win, const char *save_type) {
-    GtkWidget *dlg = gtk_message_dialog_new (win, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _ ("Failed to save %s"), save_type);
-    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), _ ("Check preset folder permissions or free up some disk space, then save again"));
+    GtkWidget *dlg = gtk_message_dialog_new (win, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Failed to save %s"), save_type);
+    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), _("Check preset folder permissions or free up some disk space, then save again"));
     gtk_dialog_run (GTK_DIALOG (dlg));
     gtk_widget_destroy (dlg);
 }
 
 static gboolean
 confirm_delete_dialog (GtkWindow *win, const char *delete_type, const char *title) {
-    GtkWidget *dlg = gtk_message_dialog_new (win, 0, GTK_MESSAGE_QUESTION, GTK_BUTTONS_CANCEL, _ ("You are about to permanently delete this %s"), delete_type);
-    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), title);
-    gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _ ("_Delete"), GTK_RESPONSE_YES));
+    GtkWidget *dlg = gtk_message_dialog_new (win, 0, GTK_MESSAGE_QUESTION, GTK_BUTTONS_CANCEL, _("You are about to permanently delete this %s"), delete_type);
+    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), "%s", title);
+    gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _("_Delete"), GTK_RESPONSE_YES));
     const int res = gtk_dialog_run (GTK_DIALOG (dlg));
     gtk_widget_destroy (dlg);
     return res == GTK_RESPONSE_YES;
@@ -103,15 +103,15 @@ struct overwrite_info {
 static gboolean
 overwrite_prompt_cb (void *ctx) {
     struct overwrite_info *info = ctx;
-    GtkWidget *dlg = gtk_message_dialog_new (GTK_WINDOW (info->progress), 0, GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, _ ("The file already exists and will be overwritten"));
-    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), info->path);
-    gtk_dialog_add_button (GTK_DIALOG (dlg), _ ("_Skip"), GTK_RESPONSE_NO);
+    GtkWidget *dlg = gtk_message_dialog_new (GTK_WINDOW (info->progress), 0, GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, _("The file already exists and will be overwritten"));
+    gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dlg), "%s", info->path);
+    gtk_dialog_add_button (GTK_DIALOG (dlg), _("_Skip"), GTK_RESPONSE_NO);
     if (info->all_prompts) {
-        gtk_dialog_add_button (GTK_DIALOG (dlg), _ ("Skip al_l"), GTK_RESPONSE_REJECT);
+        gtk_dialog_add_button (GTK_DIALOG (dlg), _("Skip al_l"), GTK_RESPONSE_REJECT);
     }
-    gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _ ("_Overwrite"), GTK_RESPONSE_YES));
+    gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _("_Overwrite"), GTK_RESPONSE_YES));
     if (info->all_prompts) {
-        gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _ ("Overwrite _all"), GTK_RESPONSE_ACCEPT));
+        gtk_widget_grab_focus (gtk_dialog_add_button (GTK_DIALOG (dlg), _("Overwrite _all"), GTK_RESPONSE_ACCEPT));
     }
     info->result = gtk_dialog_run (GTK_DIALOG (dlg));
     gtk_widget_destroy (dlg);
@@ -167,17 +167,17 @@ const char *
 status_description (const enum convert_status status) {
     switch (status) {
         case LIST_STATUS_WAITING:
-            return _ ("Waiting...");
+            return _("Waiting...");
         case LIST_STATUS_SKIPPED:
-            return _ ("Skipped");
+            return _("Skipped");
         case LIST_STATUS_CONVERTING:
-            return _ ("Converting...");
+            return _("Converting...");
         case LIST_STATUS_CONVERTED:
-            return _ ("Successfully converted");
+            return _("Successfully converted");
         case LIST_STATUS_FAILED:
-            return _ ("Failed");
+            return _("Failed");
         default:
-            return _ ("Internal error");
+            return _("Internal error");
     }
 }
 
@@ -233,13 +233,13 @@ update_remaining (GtkWidget *dlg, const unsigned elapsed, const float readpos, c
     if (elapsed > 4 && readpos > 0) {
         const float fraction = duration / readpos - 1;
         unsigned remaining = elapsed * fraction + 1;
-        const char *units = remaining < 120 ? _ ("seconds") : _ ("minutes");
+        const char *units = remaining < 120 ? _("seconds") : _("minutes");
         if (remaining >= 120) {
             remaining /= 60;
         }
-        const char *remaining_pattern = _ (" %d %s remaining");
-        char remaining_str[strlen (remaining_pattern) + strlen (units) + (size_t)log10 (remaining)];
-        sprintf (remaining_str, remaining_pattern, remaining, units);
+        const char *remaining_pattern = _(" %d %s remaining");
+        char remaining_str[strlen (remaining_pattern) + strlen (units) + (size_t)log10 (remaining) + 1];
+        snprintf (remaining_str, sizeof (remaining_str), remaining_pattern, remaining, units);
         gtk_label_set_text (GTK_LABEL (lookup_widget (dlg, "remaining")), remaining_str);
     }
 }
@@ -247,24 +247,24 @@ update_remaining (GtkWidget *dlg, const unsigned elapsed, const float readpos, c
 static void
 update_timing (GtkWidget *dlg, const unsigned elapsed, const float readpos) {
     char elapsed_str[sizeof ("%02d:%02d") + (size_t)log10 (elapsed/60)];
-    sprintf (elapsed_str, "%02d:%02d", elapsed/60, elapsed%60);
+    snprintf (elapsed_str, sizeof (elapsed_str), "%02d:%02d", elapsed/60, elapsed%60);
 
     if (readpos < 0) {
-        const char *progress_pattern = _ ("Convert time: %s (using temporary file)");
-        char progress_label[strlen (progress_pattern) + strlen (elapsed_str)];
-        sprintf (progress_label, progress_pattern, elapsed_str);
+        const char *progress_pattern = _("Convert time: %s (using temporary file)");
+        char progress_label[strlen (progress_pattern) + strlen (elapsed_str) + 1];
+        snprintf (progress_label, sizeof (progress_label), progress_pattern, elapsed_str);
         gtk_label_set_text (GTK_LABEL (lookup_widget (dlg, "message")), progress_label);
     }
     else {
         const unsigned readpos_int = readpos;
         char track_str[sizeof ("%02u:%02u:%02u") + (size_t)log10 (readpos/3600)];
-        sprintf (track_str, readpos_int < 3600 ? "%02u:%02u" : "%3$02u:%02u:%02u", readpos_int/60%60, readpos_int%60, readpos_int/3600);
+        snprintf (track_str, sizeof (track_str), readpos_int < 3600 ? "%02u:%02u" : "%3$02u:%1$02u:%2$02u", readpos_int/60%60, readpos_int%60, readpos_int/3600);
         const float speed = readpos / elapsed;
         char speed_str[sizeof ("%.1fx") + (size_t)log10 (speed)];
-        sprintf (speed_str, speed < 100 ? " (%.1fx)" : " (%.0fx)", speed);
-        const char *progress_pattern = _ ("Convert time: %s, track time: %s%s");
-        char progress_label[strlen (progress_pattern) + strlen (elapsed_str) + strlen (track_str) + strlen (speed_str)];
-        sprintf (progress_label, progress_pattern, elapsed_str, track_str, elapsed ? speed_str : "");
+        snprintf (speed_str, sizeof (speed_str), speed < 100 ? " (%.1fx)" : " (%.0fx)", speed);
+        const char *progress_pattern = _("Convert time: %s, track time: %s%s");
+        char progress_label[strlen (progress_pattern) + strlen (elapsed_str) + strlen (track_str) + strlen (speed_str) + 1];
+        snprintf (progress_label, sizeof (progress_label), progress_pattern, elapsed_str, track_str, elapsed ? speed_str : "");
         gtk_label_set_text (GTK_LABEL (lookup_widget (dlg, "message")), progress_label);
     }
 }
@@ -342,9 +342,9 @@ update_detail (struct converter_ctx_item *items, GtkTreeView *list) {
 
     GtkWidget *dlg = gtk_widget_get_toplevel (GTK_WIDGET (list));
     if (selected > 1) {
-        const char *tracks_pattern = _ ("%d tracks selected (%d skipped, %d converted, %d failed)");
-        char tracks_label[strlen (tracks_pattern) + (size_t) (log10 (selected) + log10 (skipped) + log10 (converted) + log10 (failed))];
-        sprintf (tracks_label, tracks_pattern, selected, skipped, converted, failed);
+        const char *tracks_pattern = _("%d tracks selected (%d skipped, %d converted, %d failed)");
+        char tracks_label[strlen (tracks_pattern) + (size_t) (log10 (selected) + log10 (skipped) + log10 (converted) + log10 (failed)) + 1];
+        snprintf (tracks_label, sizeof (tracks_label), tracks_pattern, selected, skipped, converted, failed);
         gtk_label_set_text (GTK_LABEL (lookup_widget (dlg, "tracks")), tracks_label);
     }
 
@@ -463,7 +463,7 @@ convert_item (struct converter_ctx *conv, struct converter_ctx_item *item) {
     set_status (conv->items, item, LIST_STATUS_CONVERTING, 0, NULL);
 
     if (!item->outpath) {
-        set_status (conv->items, item, LIST_STATUS_FAILED, 0, _ ("Internal error"));
+        set_status (conv->items, item, LIST_STATUS_FAILED, 0, _("Internal error"));
         return;
     }
 
@@ -479,12 +479,12 @@ convert_item (struct converter_ctx *conv, struct converter_ctx_item *item) {
         sched_yield ();
         deadbeef->mutex_lock (conv->mutex);
         if (paths_match) {
-            set_status (conv->items, item, LIST_STATUS_FAILED, 0, _ ("Destination file would overwrite source file"));
+            set_status (conv->items, item, LIST_STATUS_FAILED, 0, _("Destination file would overwrite source file"));
             return;
         }
 
         if (conv->overwrite_action == OVERWRITE_ACTION_SKIP || conv->overwrite_action == OVERWRITE_ACTION_PROMPT && !overwrite_dialog (conv, item)) {
-            set_status (conv->items, item, LIST_STATUS_SKIPPED, 100, _ ("File already exists"));
+            set_status (conv->items, item, LIST_STATUS_SKIPPED, 100, _("File already exists"));
             return;
         }
 
@@ -496,7 +496,7 @@ convert_item (struct converter_ctx *conv, struct converter_ctx_item *item) {
     const int res = converter_plugin->convert (item->item, conv->encoder_preset, item->outpath, conv->dsp_preset, conv->output_bps, conv->output_is_float, &conv->api, &message, convert_callback, item);
     deadbeef->mutex_lock (conv->mutex);
     if (conv->api == DDB_CONVERT_API_ABORT) {
-        message = _ ("User aborted");
+        message = _("User aborted");
     }
     set_status (conv->items, item, res ? LIST_STATUS_FAILED : LIST_STATUS_CONVERTED, res ? 0 : 100, message);
 }
@@ -591,7 +591,7 @@ converter_process (GtkWidget *dlg, DB_playItem_t **items) {
     GtkCellRenderer *progress_cell = gtk_cell_renderer_progress_new ();
     GtkTreeViewColumn *progress_col = gtk_tree_view_column_new_with_attributes ("", progress_cell, "text", LIST_STORE_NAME, "value", LIST_STORE_PERCENT, NULL);
     gtk_tree_view_append_column (list, progress_col);
-    g_object_set (G_OBJECT (progress_cell), "text-xalign", 0.0);
+    g_object_set (G_OBJECT (progress_cell), "text-xalign", 0.0, NULL);
 
     const int use_source_folder = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (lookup_widget (dlg, "use_source_folder")));
     char *rootfolder = get_root_folder (dlg, items);
@@ -677,7 +677,7 @@ set_default_button (GtkWidget *button) {
 static void
 on_encoder_cmd_changed (GtkEntry *encoder_cmd, GtkWidget *default_button) {
     const int pipe = !strstr (gtk_entry_get_text (encoder_cmd), "%i");
-    const char *tooltip = pipe ? _ ("Data will be piped to this encoder command on stdin") : _ ("A temporary file will be passed to this encoder command");
+    const char *tooltip = pipe ? _("Data will be piped to this encoder command on stdin") : _("A temporary file will be passed to this encoder command");
     gtk_widget_set_tooltip_text (GTK_WIDGET (encoder_cmd), tooltip);
 }
 
@@ -709,11 +709,11 @@ fill_encoder_presets (GtkComboBox *combo) {
     gtk_list_store_clear (mdl);
 
     GtkTreeIter iter;
-    const char *builtin_pattern = _ ("[Built-in] %s");
+    const char *builtin_pattern = _("[Built-in] %s");
     for (ddb_encoder_preset_t *p = converter_plugin->encoder_preset_get_for_idx (0); p; p = converter_plugin->encoder_preset_get_next (p)) {
         const char *pattern = p->builtin ? builtin_pattern : "%s";
-        char title[strlen (pattern) + strlen (p->title)];
-        sprintf (title, pattern, p->title);
+        char title[strlen (pattern) + strlen (p->title) + 1];
+        snprintf (title, sizeof (title), pattern, p->title);
         gtk_list_store_insert_with_values (mdl, &iter, -1, 0, title, -1);
     }
 
@@ -755,7 +755,7 @@ save_encoder_preset (GtkWidget *dlg) {
 
     ddb_encoder_preset_t *saved = converter_plugin->encoder_preset_save (p);
     if (!saved) {
-        save_alert_dialog (GTK_WINDOW (gtkui_plugin->get_mainwin ()), _ ("encoder preset"));
+        save_alert_dialog (GTK_WINDOW (gtkui_plugin->get_mainwin ()), _("encoder preset"));
     }
 
     return saved;
@@ -769,7 +769,7 @@ edit_encoder_preset (GtkWidget *dlg, ddb_encoder_preset_t **preset_ptr) {
         switch (res) {
             case GTK_RESPONSE_REJECT: {
                 ddb_encoder_preset_t *preset = *preset_ptr;
-                if (confirm_delete_dialog (GTK_WINDOW (dlg), _ ("encoder preset"), preset->title)) {
+                if (confirm_delete_dialog (GTK_WINDOW (dlg), _("encoder preset"), preset->title)) {
                     converter_plugin->encoder_preset_remove (preset);
                     deadbeef->conf_remove_items ("converter.encoder_title");
                     return GTK_RESPONSE_OK;
@@ -807,14 +807,14 @@ on_edit_encoder_presets_clicked (GtkWidget *button, GtkComboBox *encoder) {
     ddb_encoder_preset_t *preset;
 
     GtkWidget *dlg = create_encpreset_editor ();
-    gtk_window_set_title (GTK_WINDOW (dlg), _ ("Edit encoder"));
+    gtk_window_set_title (GTK_WINDOW (dlg), _("Edit encoder"));
     gtk_dialog_set_default_response (GTK_DIALOG (dlg), GTK_RESPONSE_OK);
     gtk_window_set_transient_for (GTK_WINDOW (dlg), GTK_WINDOW (gtk_widget_get_toplevel (button)));
 
     GtkWidget *encoder_cmd = lookup_widget (dlg, "encoder_cmd");
     g_signal_connect (encoder_cmd, "changed", G_CALLBACK (on_encoder_cmd_changed), NULL);
-    GtkWidget *help_link = gtk_link_button_new_with_label ("http://github.com/Alexey-Yakovenko/deadbeef/wiki/Encoder-Command-Line", _ ("Help"));
-    gtk_widget_set_tooltip_text (help_link, _ ("Leave blank to output RIFF WAV\n%o = full output path\n%i = temporary file (use if encoder can't handle raw WAV)\nClick for more help"));
+    GtkWidget *help_link = gtk_link_button_new_with_label ("http://github.com/Alexey-Yakovenko/deadbeef/wiki/Encoder-Command-Line", _("Help"));
+    gtk_widget_set_tooltip_text (help_link, _("Leave blank to output RIFF WAV\n%o = full output path\n%i = temporary file (use if encoder can't handle raw WAV)\nClick for more help"));
     gtk_widget_show (help_link);
     gtk_box_pack_start (GTK_BOX (gtk_widget_get_parent (encoder_cmd)), help_link, FALSE, FALSE, 0);
     gtk_widget_set_can_default (help_link, FALSE);
@@ -1079,7 +1079,7 @@ save_dsp_preset (GtkWidget *dlg) {
 
     ddb_dsp_preset_t *saved = converter_plugin->dsp_preset_save (p);
     if (!saved) {
-        save_alert_dialog (GTK_WINDOW (gtkui_plugin->get_mainwin ()), _ ("DSP preset"));
+        save_alert_dialog (GTK_WINDOW (gtkui_plugin->get_mainwin ()), _("DSP preset"));
     }
 
     return saved;
@@ -1092,7 +1092,7 @@ edit_dsp_preset (GtkWidget *dlg, ddb_dsp_preset_t *preset) {
         const int res = gtk_dialog_run (GTK_DIALOG (dlg));
         switch (res) {
             case GTK_RESPONSE_REJECT: {
-                if (confirm_delete_dialog (GTK_WINDOW (dlg), _ ("DSP preset"), preset->title)) {
+                if (confirm_delete_dialog (GTK_WINDOW (dlg), _("DSP preset"), preset->title)) {
                     converter_plugin->dsp_preset_remove (preset);
                     clear_dsp_plugin_chain_list (GTK_TREE_VIEW (lookup_widget (dlg, "plugins")));
                     deadbeef->conf_remove_items ("converter.dsp_title");
@@ -1129,7 +1129,7 @@ edit_dsp_preset (GtkWidget *dlg, ddb_dsp_preset_t *preset) {
 static GtkWidget *
 create_dsp_preset_dlg (ddb_dsp_preset_t **preset_ptr) {
     GtkWidget *dlg = create_dsppreset_editor ();
-    gtk_window_set_title (GTK_WINDOW (dlg), _ ("Edit DSP preset"));
+    gtk_window_set_title (GTK_WINDOW (dlg), _("Edit DSP preset"));
     gtk_dialog_set_default_response (GTK_DIALOG (dlg), GTK_RESPONSE_OK);
 
     GtkTreeView *list = GTK_TREE_VIEW (lookup_widget (dlg, "plugins"));
@@ -1227,7 +1227,7 @@ on_output_folder_changed (GtkEntry *entry, DB_playItem_t **item) {
 
 static void
 on_converter_output_browse_clicked (GtkButton *button, GtkWindow *win) {
-    GtkWidget *dlg = gtk_file_chooser_dialog_new (_ ("Select folder..."), win, GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
+    GtkWidget *dlg = gtk_file_chooser_dialog_new (_("Select folder..."), win, GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
     gtk_window_set_transient_for (GTK_WINDOW (dlg), win);
     gtk_file_chooser_set_select_multiple (GTK_FILE_CHOOSER (dlg), FALSE);
 
@@ -1239,7 +1239,7 @@ on_converter_output_browse_clicked (GtkButton *button, GtkWindow *win) {
     else {
         const char *out_folder = get_output_folder ();
         char dir[sizeof ("file://") + strlen (out_folder)];
-        sprintf (dir, "file://%s", out_folder);
+        snprintf (dir, sizeof (dir), "file://%s", out_folder);
         gtk_file_chooser_set_current_folder_uri (GTK_FILE_CHOOSER (dlg), dir);
     }
     deadbeef->conf_unlock ();
@@ -1382,7 +1382,7 @@ converter_show_cb (void *data) {
         gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (preserve_folders_widget), deadbeef->conf_get_int ("converter.preserve_folder_structure", 0));
     }
 
-    gtk_widget_set_tooltip_text (lookup_widget (dlg, "path_label"), items[1] ? _ ("Path of first converted track") : _ ("Path of converted track"));
+    gtk_widget_set_tooltip_text (lookup_widget (dlg, "path_label"), items[1] ? _("Path of first converted track") : _("Path of converted track"));
     GtkWidget *output_folder_widget = lookup_widget (dlg, "output_folder");
     GtkWidget *output_file_widget = lookup_widget (dlg, "output_file");
     deadbeef->conf_lock ();
@@ -1393,8 +1393,8 @@ converter_show_cb (void *data) {
     g_signal_connect (output_file_widget, "changed", G_CALLBACK (on_output_file_changed), items);
     g_signal_connect (lookup_widget (dlg, "output_browse"), "clicked", G_CALLBACK (on_converter_output_browse_clicked), dlg);
 
-    GtkWidget *help_link = gtk_link_button_new_with_label ("http://github.com/Alexey-Yakovenko/deadbeef/wiki/Title-formatting", _ ("Help"));
-    gtk_widget_set_tooltip_text (help_link, _ ("%a = artist name\n%b = album title\n%t = track title\n%g = genre\n%n = track #\nClick for full list"));
+    GtkWidget *help_link = gtk_link_button_new_with_label ("http://github.com/Alexey-Yakovenko/deadbeef/wiki/Title-formatting", _("Help"));
+    gtk_widget_set_tooltip_text (help_link, _("%a = artist name\n%b = album title\n%t = track title\n%g = genre\n%n = track #\nClick for full list"));
     gtk_widget_show (help_link);
     gtk_box_pack_start (GTK_BOX (gtk_widget_get_parent (output_file_widget)), help_link, FALSE, FALSE, 0);
     gtk_button_set_focus_on_click (GTK_BUTTON (help_link), FALSE);
@@ -1627,7 +1627,8 @@ DB_plugin_t *
 converter_gtk3_load (DB_functions_t *api)
 #else
 converter_gtk2_load (DB_functions_t *api)
-#endif {
+#endif
+{
     deadbeef = api;
     return DB_PLUGIN (&plugin);
 }
