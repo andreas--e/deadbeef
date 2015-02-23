@@ -849,23 +849,21 @@ get_output_path (DB_playItem_t *it, const ddb_encoder_preset_t *encoder_preset, 
 }
 
 static int
-check_dir (const char *path) {
-    struct stat stat_struct;
-    if (!stat (path, &stat_struct)) {
-        return S_ISDIR (stat_struct.st_mode);
-    }
-    if (errno != ENOENT) {
+check_dir (char *dir) {
+    if (mkdir (dir, 0755)) {
         return 0;
     }
+   while (*dir) {
+        struct stat stat_struct;
+        if (!stat (dir, &stat_struct)) {
+            return S_ISDIR (stat_struct.st_mode);
+        }
+        if (errno != ENOENT) {
+            return 0;
+        }
 
-    char* dir = strdup (path);
-    if (!dir) {
-        return 0;
+        dirname (dir);
     }
-
-    const int good_dir = check_dir (dirname (dir));
-    free (dir);
-    return good_dir && !mkdir (path, 0755);
 }
 
 static int
